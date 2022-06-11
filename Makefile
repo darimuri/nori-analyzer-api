@@ -2,6 +2,8 @@ SHELL := /bin/bash
 
 build:
 	./mvnw package
+run: build
+	java -jar `ls target/*.jar`
 
 build-image: build
 	mkdir -p docekr/jars

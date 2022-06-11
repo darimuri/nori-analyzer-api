@@ -13,12 +13,16 @@ import org.apache.lucene.analysis.ko.KoreanAnalyzer;
 import org.apache.lucene.analysis.ko.KoreanPartOfSpeechStopFilter;
 import org.apache.lucene.analysis.ko.KoreanTokenizer.DecompoundMode;
 import org.apache.lucene.analysis.ko.POS.Tag;
+import org.apache.lucene.analysis.ko.POS.Type;
 import org.apache.lucene.analysis.ko.dict.UserDictionary;
+import org.apache.lucene.analysis.ko.dict.Dictionary.Morpheme;
 import org.apache.lucene.analysis.ko.tokenattributes.PartOfSpeechAttribute;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.springframework.web.context.annotation.ApplicationScope;
+import org.springframework.stereotype.Component;
 
-@ApplicationScope
+import me.darimuri.norianalyzerapi.entity.Token;
+
+@Component
 public class NoriAnalyzer {
     
     KoreanAnalyzer analyzer;
@@ -41,19 +45,36 @@ public class NoriAnalyzer {
         }
     }
 
-    public String[] Tokenize(String text) throws IOException {
+    public Token[] Tokenize(String text) throws IOException {
         TokenStream ts = analyzer.tokenStream("string", text);
         CharTermAttribute ctAttr = ts.addAttribute(CharTermAttribute.class);
         PartOfSpeechAttribute posAttr = ts.addAttribute(PartOfSpeechAttribute.class);
 
         ts.reset();
 
-        List<String> tokens = new ArrayList<>();
+        List<Token> tokens = new ArrayList<>();
 
         while (ts.incrementToken()) {
-            String token = ctAttr.toString();
+            String tokenString = ctAttr.toString();
             Tag leftPOS = posAttr.getLeftPOS();
             Tag rightPOS = posAttr.getRightPOS();
+
+            Type posType = posAttr.getPOSType();
+            Morpheme[] morphemes = posAttr.getMorphemes();
+
+            Token token = new Token();
+            token.setToken(tokenString);
+            token.setType(posType.name());
+
+            if (morphemes != null) {
+                token.setMorphemes(new ArrayList<me.darimuri.norianalyzerapi.entity.Morpheme>());
+                for (Morpheme m : morphemes) {
+                    me.darimuri.norianalyzerapi.entity.Morpheme mm = new me.darimuri.norianalyzerapi.entity.Morpheme();
+                    mm.setSurfaceForm(m.surfaceForm);
+                    mm.setTag(m.posTag.description());
+                    token.getMorphemes().add(mm);
+                }
+            }
 
             if (leftPOS == Tag.NNG && rightPOS == Tag.NNG) {
                 tokens.add(token);
@@ -77,6 +98,6 @@ public class NoriAnalyzer {
         ts.end();
         ts.close();
 
-        return tokens.toArray(new String[tokens.size()]);
+        return tokens.toArray(new Token[tokens.size()]);
     }
 }
