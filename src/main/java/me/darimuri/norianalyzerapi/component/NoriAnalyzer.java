@@ -1,5 +1,6 @@
 package me.darimuri.norianalyzerapi.component;
 
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,21 +29,35 @@ public class NoriAnalyzer {
     KoreanAnalyzer analyzer;
 
     public NoriAnalyzer() throws IOException {
-        InputStream in = new FileInputStream("src/main/resources/userdict.txt");
-        Reader reader = new InputStreamReader(in, "UTF-8");
-        UserDictionary userDict = UserDictionary.open(reader);
-        analyzer = new KoreanAnalyzer(userDict, DecompoundMode.NONE, KoreanPartOfSpeechStopFilter.DEFAULT_STOP_TAGS,
-                false);
-
-        try {
-            reader.close();
-        } catch (Exception e) {
+        String userDictPath = System.getenv("NORI_USERDICT_PATH");
+        if (userDictPath == null) {
+            userDictPath = "userdict/userdict.txt";
         }
 
-        try {
-            in.close();
-        } catch (Exception e) {
-        }
+        File f = new File(userDictPath);
+
+        System.out.println("Load userdict from " + f.getAbsolutePath());
+
+        UserDictionary userDict = null;
+
+        if (true == f.exists()) {
+            InputStream in = new FileInputStream(userDictPath);
+            Reader reader = new InputStreamReader(in, "UTF-8");
+            userDict = UserDictionary.open(reader);
+    
+            try {
+                reader.close();
+            } catch (Exception e) {
+            }
+    
+            try {
+                in.close();
+            } catch (Exception e) {
+            }
+         }
+
+         analyzer = new KoreanAnalyzer(userDict, DecompoundMode.NONE, KoreanPartOfSpeechStopFilter.DEFAULT_STOP_TAGS,
+                    false);
     }
 
     public Token[] Tokenize(String text) throws IOException {

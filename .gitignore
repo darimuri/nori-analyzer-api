@@ -34,4 +34,5 @@ build/
 
 ### My ###
 /.mvn
-/docekr/jars
+/docker/jars
+/docker/userdict

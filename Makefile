@@ -1,24 +1,32 @@
 SHELL := /bin/bash
 
 build:
-	./mvnw package
+	rm -rf docker/jars/*.jar
+	./mvnw clean package
 run: build
 	java -jar `ls target/*.jar`
 
-build-image: build
-	mkdir -p docekr/jars
-	cp -a target/*.jar docekr/jars/
-	docker build -t nori-analyzer-api:latest ./docekr
+rm-image:
+	docker rm nori-analyzer-api || exit 0
+	docker rmi nori-analyzer-api:`git log -1 --pretty=%h` || exit 0
+	
+build-image: build rm-image
+	mkdir -p docker/jars
+	mkdir -p docker/userdict
+	cp -a target/*.jar docker/jars/
+	cp -a userdict/* docker/userdict/
+	docker build -t nori-analyzer-api:`git log -1 --pretty=%h` ./docker
+
+launch-image: build-image
+	mkdir -p `pwd`/coll_dir
+	docker run -it --name nori-analyzer-api -p 8080:880 --entrypoint sh nori-analyzer-api:`git log -1 --pretty=%h`
 
 run-image: build-image
-	docker run -it --name nori-analyzer-api -p 8080:8080 nori-analyzer-api:latest
-
-sh-image: build-image
-	docker run -it --name nori-analyzer-api --entrypoint sh nori-analyzer-api:latest
+	docker run -it --name nori-analyzer-api -p 8080:8080 nori-analyzer-api:`git log -1 --pretty=%h`
 
 tag-image: build-image
 ifdef TAG
-	docker tag nori-analyzer-api:latest darimuri/nori-analyzer-api:${TAG}
+	docker tag nori-analyzer-api:`git log -1 --pretty=%h` darimuri/nori-analyzer-api:${TAG}
 else
 	@echo "TAG is required"
 endif
@@ -29,7 +37,3 @@ ifdef TAG
 else
 	@echo "TAG is required"
 endif
-
-rm-image:
-	docker rm nori-analyzer-api
-	docker rmi nori-analyzer-api:latest
